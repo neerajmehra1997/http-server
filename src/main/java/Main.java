@@ -30,7 +30,7 @@ public class Main {
             String responseMessage;
             System.out.println("Received request: " + requestMessage);
 
-            if (requestMessage != null && requestMessage.split(" ")[1].startsWith("/")) {
+            if (requestMessage != null && requestMessage.split(" ")[1].equals("/")) {
                 System.out.println("Extracted URL Path: " + requestMessage.split(" ")[1]);
                 responseMessage = "HTTP/1.1 200 OK\r\n\r\n";
             } else {
