@@ -1,79 +1,86 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.http.HttpClient;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
+    private static final int PORT = 4221;
+    private static final int THREAD_POOL_SIZE = 10;
+
     public static void main(String[] args) {
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
-        System.out.println("Logs from your program will appear here!");
+        System.out.println("Server starting on port " + PORT);
+        AtomicInteger threadCount = new AtomicInteger(0);
 
+        // Ensure the server can reuse the address
 
-        try {
-            ServerSocket serverSocket = new ServerSocket(4221);
-
-
-            // Since the tester restarts your program quite often, setting SO_REUSEADDR
-            // ensures that we don't run into 'Address already in use' errors
+        ExecutorService pool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             serverSocket.setReuseAddress(true);
-
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("accepted new connection");
-
-            BufferedReader bufferedReader = new BufferedReader(new java.io.InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter printWriter = new PrintWriter(clientSocket.getOutputStream(), true);
-
-            String requestMessage = bufferedReader.readLine();
-            String responseMessage = null;
-            System.out.println("Received request: " + requestMessage);
-
-
-            // Extract URL Path
-            /*if (requestMessage != null && requestMessage.split(" ")[1].startsWith("/")) {
-                System.out.println("Extracted URL Path: " + requestMessage.split(" ")[1]);
-                responseMessage = "HTTP/1.1 200 OK\r\n\r\n";
-            } else {
-                responseMessage = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }*/
-
-            /**
-             * Respond with body: It accept the request, extract the string from url adn return in response body
-             */
-            if (requestMessage != null && requestMessage.split(" ")[1].startsWith("/")) {
-                String url = requestMessage.split(" ")[1];
-                String extractedString = url.split("/")[2];
-                System.out.println("Extracted String: " + extractedString);
-                String contentType = "Content-Type: text/plain\r\n";
-                String contentLength = "Content-Length: " + extractedString.length() + "\r\n";
-                responseMessage = "HTTP/1.1 200 OK\r\n" + contentType + contentLength + "\r\n" + extractedString;
-
-                /**
-                 * // Status line
-                 * HTTP/1.1 200 OK
-                 * \r\n                          // CRLF that marks the end of the status line
-                 *
-                 * // Headers
-                 * Content-Type: text/plain\r\n  // Header that specifies the format of the response body
-                 * Content-Length: 3\r\n         // Header that specifies the size of the response body, in bytes
-                 * \r\n                          // CRLF that marks the end of the headers
-                 *
-                 * // Response body
-                 * abc                           // The string from the request
-                 */
+            while (true) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                 //   System.out.println("Accepted new connection");
+                    pool.submit(() -> {
+                        System.out.println("Accepted new connection by thread" + threadCount.getAndIncrement());
+                        handleClient(clientSocket);
+                    });
+                } catch (IOException e) {
+                    System.err.println("Error handling client: " + e.getMessage());
+                }
             }
-
-
-            System.out.println("Response message: " + responseMessage);
-            printWriter.println(responseMessage);
-
-
-            serverSocket.accept(); // Wait for connection from client.
-            System.out.println("accepted new connection");
         } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+            System.err.println("Could not listen on port " + PORT + ": " + e.getMessage());
         }
+    }
+
+    private static void handleClient(Socket clientSocket) {
+        try (clientSocket;
+             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             OutputStream output = clientSocket.getOutputStream()) {
+
+
+            String requestLine = reader.readLine();
+            System.out.println("Received request: " + requestLine);
+
+            if (requestLine != null) {
+                String response = buildResponse(requestLine);
+                output.write(response.getBytes());
+                output.flush();
+            }
+        } catch (IOException e) {
+            System.err.println("Error handling client request: " + e.getMessage());
+        }
+    }
+
+    private static String buildResponse(String requestLine) {
+        String[] requestParts = requestLine.split(" ");
+        if (requestParts.length < 2 || !requestParts[1].startsWith("/")) {
+            return buildErrorResponse();
+        }
+
+        String path = requestParts[1];
+        String[] pathParts = path.split("/");
+
+        if (pathParts.length < 3) {
+            return buildErrorResponse();
+        }
+
+        String content = pathParts[2];
+        return buildSuccessResponse(content);
+    }
+
+    private static String buildSuccessResponse(String content) {
+        return String.format("HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "Content-Length: %d\r\n" +
+                "\r\n" +
+                "%s", content.length(), content);
+    }
+
+    private static String buildErrorResponse() {
+        return "HTTP/1.1 404 Not Found\r\n\r\n";
     }
 }
