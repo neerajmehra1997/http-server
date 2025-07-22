@@ -46,11 +46,15 @@ public class Main {
             String requestLine = reader.readLine();
             System.out.println("Received request: " + requestLine);
 
+
+            /**
+             * Checking for url correction or 404 not found
+             */
             if (requestLine != null && requestLine.split(" ")[1].equals("/")) {
                 String response = buildPlainSuccessResponse();
                 output.write(response.getBytes());
                 output.flush();
-            } else if (requestLine != null && requestLine.split("/")[1].equals("404")) {
+            } else if (requestLine != null && !requestLine.split("/")[1].equals("echo")) {
                 String response = build404Response();
                 output.write(response.getBytes());
                 output.flush();
