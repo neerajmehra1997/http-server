@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,11 +46,25 @@ public class Main {
             String requestLine = reader.readLine();
             System.out.println("Received request: " + requestLine);
 
-            if (requestLine != null) {
+            if (requestLine != null && requestLine.split(" ")[1].equals("/")) {
+                String response = buildPlainSuccessResponse();
+                output.write(response.getBytes());
+                output.flush();
+            } else if (requestLine != null && requestLine.split("/")[1].equals("404")) {
+                String response = build404Response();
+                output.write(response.getBytes());
+                output.flush();
+            } else {
                 String response = buildResponse(requestLine);
                 output.write(response.getBytes());
                 output.flush();
             }
+
+            /*if (requestLine != null) {
+                String response = buildResponse(requestLine);
+                output.write(response.getBytes());
+                output.flush();
+            }*/
         } catch (IOException e) {
             System.err.println("Error handling client request: " + e.getMessage());
         }
@@ -82,5 +97,13 @@ public class Main {
 
     private static String buildErrorResponse() {
         return "HTTP/1.1 404 Not Found\r\n\r\n";
+    }
+
+    private static String buildPlainSuccessResponse() {
+        return String.format("HTTP/1.1 200 OK\\r\\n\r\n");
+    }
+
+    private static String build404Response() {
+        return String.format("HTTP/1.1 404 Not Found\\r\\n\r\n");
     }
 }
