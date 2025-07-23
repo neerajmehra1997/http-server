@@ -60,6 +60,17 @@ public class Main {
 
 
             /**
+             * Support for post request.
+             */
+            if (requestLine != null && requestLine.split(" ")[1].startsWith("/files")) {
+                String fileName = requestLine.split(" ")[1].substring(7); // Extracting file name from the request
+                createFile(fileName, "This is a test file content for " + fileName);
+                String response = buildSuccess201CreatedResponse();
+                output.write(response.getBytes());
+                output.flush();
+            } else
+
+            /**
              * Checking for url correction or 404 not found
              */
             if (requestLine != null && requestLine.split(" ")[1].equals("/")) {
@@ -111,6 +122,10 @@ public class Main {
                 "%s", content.length(), content);
     }
 
+    private static String buildSuccess201CreatedResponse() {
+        return String.format("HTTP/1.1 201 Created\r\n");
+    }
+
     private static String buildErrorResponse() {
         return "HTTP/1.1 404 Not Found\r\n\r\n";
     }
@@ -121,5 +136,17 @@ public class Main {
 
     private static String build404Response() {
         return String.format("HTTP/1.1 404 Not Found\\r\\n\r\n");
+    }
+    private static void createFile(String fileName, String content) throws IOException {
+        String directory = "files";
+        File dir = new File(directory);
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
+
+        File file = new File(dir, fileName);
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(content);
+        }
     }
 }
