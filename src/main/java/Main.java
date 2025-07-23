@@ -46,11 +46,23 @@ public class Main {
             String requestLine = reader.readLine();
             System.out.println("Received request: " + requestLine);
 
+            /**
+             * Reading Headers
+             */
+
+            System.out.println(requestLine);
+
+            if (requestLine.split(" ")[1].startsWith("/user")) {
+                String response = "HTTP/1.1 200 OK\\r\\nContent-Type: text/plain\\r\\nContent-Length: 12\\r\\n\\r\\nfoobar/1.2.3";
+                output.write(response.getBytes());
+                output.flush();
+            }
+
 
             /**
              * Checking for url correction or 404 not found
              */
-            if (requestLine != null && requestLine.split(" ")[1].equals("/")) {
+           /* if (requestLine != null && requestLine.split(" ")[1].equals("/")) {
                 String response = buildPlainSuccessResponse();
                 output.write(response.getBytes());
                 output.flush();
@@ -62,7 +74,7 @@ public class Main {
                 String response = buildResponse(requestLine);
                 output.write(response.getBytes());
                 output.flush();
-            }
+            }*/
 
             /*if (requestLine != null) {
                 String response = buildResponse(requestLine);
